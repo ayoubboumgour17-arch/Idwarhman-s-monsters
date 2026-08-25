@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>همسات الخيانة | Whispers of Betrayal</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#050505;color:#e0e0e0;font-family:'Segoe UI',Arial,sans-serif;overflow:hidden;user-select:none;touch-action:none}
+.screen{display:none;width:100vw;height:100vh;flex-direction:column;align-items:center;justify-content:center;position:relative}
+.screen.active{display:flex}
+
+/* Main Menu */
+#mainMenu{background:linear-gradient(180deg,#0a0a0a 0%,#1a0505 50%,#0a0a0a 100%)}
+.title{font-size:clamp(32px,8vw,56px);color:#ff2222;text-shadow:0 0 30px rgba(255,30,30,0.6),0 0 60px rgba(255,0,0,0.2);margin-bottom:8px;letter-spacing:3px;text-align:center}
+.subtitle{font-size:clamp(10px,2.5vw,14px);color:#555;margin-bottom:30px;text-align:center}
+.menu-box{background:rgba(15,15,15,0.95);border:1px solid #2a2a2a;border-radius:12px;padding:25px;width:min(90vw,380px);box-shadow:0 0 40px rgba(0,0,0,0.9)}
+.input-group{margin-bottom:12px}
+.input-group label{display:block;margin-bottom:4px;font-size:11px;color:#666}
+.input-group input{width:100%;padding:10px;background:#111;border:1px solid #2a2a2a;color:#fff;border-radius:6px;font-size:14px}
+.input-group input:focus{outline:none;border-color:#ff3333}
+.btn{width:100%;padding:12px;background:#1a1a1a;border:1px solid #333;color:#e0e0e0;border-radius:6px;cursor:pointer;font-size:13px;margin-top:8px;transition:all .2s}
+.btn:hover{background:#252525;border-color:#ff3333}
+.btn.primary{background:#3a1010;border-color:#ff3333;color:#fff}
+.btn.primary:hover{background:#4a1a1a}
+.divider{text-align:center;margin:12px 0;color:#444;font-size:11px}
+
+/* Map Selection */
+.map-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:15px 0}
+.map-card{padding:10px;background:#111;border:2px solid #222;border-radius:8px;cursor:pointer;text-align:center;font-size:11px;transition:all .2s}
+.map-card:hover{border-color:#444}
+.map-card.selected{border-color:#ff3333;background:#1a0a0a}
+.map-card .map-name{color:#ccc;font-weight:bold;margin-bottom:4px}
+.map-card .map-desc{color:#666;font-size:9px}
+
+/* Lobby */
+#lobbyScreen{background:#080808}
+.lobby-container{width:min(95vw,650px);background:rgba(15,15,15,0.97);border:1px solid #2a2a2a;border-radius:12px;padding:25px}
+.lobby-header{text-align:center;margin-bottom:15px}
+.room-code{font-size:22px;color:#ff3333;font-family:monospace;background:#0f0505;padding:10px;border-radius:6px;margin:8px 0;border:1px solid #2a1010}
+.player-list{margin:15px 0;max-height:250px;overflow-y:auto}
+.player-item{display:flex;justify-content:space-between;align-items:center;padding:10px;background:#111;margin-bottom:5px;border-radius:6px;border:1px solid #1a1a1a}
+.player-item.ready{border-color:#1a3a1a;background:#0a1a0a}
+.player-item .name{font-weight:bold;font-size:13px}
+.player-item .status{font-size:11px;color:#666}
+.player-item.ready .status{color:#3aff3a}
+.player-item .curse{color:#ff3333;font-size:10px;margin-left:5px}
+
+/* Game Screen */
+#gameScreen{background:#000;position:relative}
+#gameCanvas{position:absolute;top:0;left:0;width:100%;height:100%;z-index:1}
+
+/* HUD */
+.hud{position:absolute;pointer-events:none;z-index:10}
+.hud-top{top:10px;left:50%;transform:translateX(-50%);text-align:center}
+.timer{font-size:clamp(18px,4vw,26px);color:#ff3333;font-family:monospace;text-shadow:0 0 15px rgba(255,51,51,0.8)}
+.objective{font-size:clamp(10px,2.5vw,13px);color:#aaa;margin-top:4px;background:rgba(0,0,0,0.8);padding:4px 12px;border-radius:12px;white-space:nowrap}
+.hud-bottom-left{bottom:15px;left:15px}
+.bar-container{width:min(180px,45vw);height:16px;background:rgba(0,0,0,0.8);border:1px solid #2a2a2a;border-radius:8px;overflow:hidden;margin-bottom:4px}
+.bar-fill{height:100%;transition:width .2s}
+.health-bar{background:linear-gradient(90deg,#3a0000,#ff2222)}
+.stamina-bar{background:linear-gradient(90deg,#003a00,#22ff22)}
+.bar-label{font-size:9px;color:#555;margin-bottom:2px}
+.hud-bottom-right{bottom:15px;right:15px;text-align:left}
+.weapon-info{background:rgba(0,0,0,0.85);padding:8px;border-radius:6px;border:1px solid #2a2a2a;font-size:11px}
+.ammo{font-size:18px;color:#ffaa33}
+.keys{margin-top:6px;display:flex;gap:4px}
+.key-icon{width:16px;height:16px;border-radius:50%;border:2px solid #222;opacity:.3}
+.key-icon.red{background:#ff2222}.key-icon.blue{background:#2222ff}.key-icon.green{background:#22ff22}
+.key-icon.active{opacity:1;box-shadow:0 0 8px currentColor;animation:keyPulse 1s infinite}
+@keyframes keyPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.2)}}
+
+/* Minimap */
+.minimap{position:absolute;top:15px;right:15px;width:120px;height:120px;background:rgba(0,0,0,0.85);border:2px solid #2a2a2a;border-radius:6px;z-index:10}
+
+/* Damage Overlay */
+.damage-overlay{position:absolute;top:0;left:0;right:0;bottom:0;background:radial-gradient(circle,transparent 30%,rgba(255,0,0,0.4) 100%);pointer-events:none;opacity:0;transition:opacity .15s;z-index:15}
+.damage-overlay.active{opacity:1}
+
+/* Hiding Overlay */
+.hiding-overlay{position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.95);display:none;align-items:center;justify-content:center;flex-direction:column;z-index:20}
+.hiding-overlay.active{display:flex}
+.hiding-text{font-size:clamp(24px,6vw,36px);color:#ff2222;animation:pulse 2s infinite;text-align:center}
+@keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}}
+
+/* Jump Scare */
+.jumpscare{position:absolute;top:0;left:0;right:0;bottom:0;background:#000;display:none;align-items:center;justify-content:center;z-index:100;pointer-events:none}
+.jumpscare.active{display:flex;animation:jumpscareAnim .8s forwards}
+@keyframes jumpscareAnim{0%{opacity:0;transform:scale(0.5)}20%{opacity:1;transform:scale(1.1)}40%{transform:scale(1)}80%{opacity:1}100%{opacity:0;transform:scale(1.2)}}
+.jumpscare img{max-width:80vw;max-height:80vh;border-radius:8px;box-shadow:0 0 50px rgba(255,0,0,0.5)}
+.jumpscare-text{position:absolute;bottom:20%;color:#ff2222;font-size:clamp(20px,5vw,36px);text-shadow:0 0 20px rgba(255,0,0,0.8);text-align:center;font-weight:bold}
+
+/* Notifications */
+.notification{position:absolute;top:70px;left:50%;transform:translateX(-50%);background:rgba(180,20,20,0.95);color:#fff;padding:8px 16px;border-radius:6px;font-size:12px;animation:fadeInOut 3s forwards;z-index:30;white-space:nowrap;text-align:center}
+@keyframes fadeInOut{0%{opacity:0;transform:translateX(-50%) translateY(-15px)}10%{opacity:1;transform:translateX(-50%) translateY(0)}90%{opacity:1}100%{opacity:0}}
+
+/* Chat */
+.chat-box{position:absolute;bottom:60px;left:50%;transform:translateX(-50%);width:min(90vw,380px);background:rgba(0,0,0,0.9);border:1px solid #2a2a2a;border-radius:6px;display:none;z-index:25}
+.chat-box.active{display:block}
+.chat-messages{max-height:120px;overflow-y:auto;padding:8px;font-size:11px}
+.chat-input{width:100%;padding:8px;background:#111;border:none;border-top:1px solid #2a2a2a;color:#fff;font-size:12px}
+
+/* Game Over */
+#gameOverScreen{background:rgba(0,0,0,0.97)}
+.game-over-box{text-align:center;padding:20px;width:min(95vw,550px)}
+.game-over-title{font-size:clamp(24px,6vw,40px);margin-bottom:15px}
+.game-over-title.escape{color:#33ff33}.game-over-title.dead{color:#ff2222}
+.results-table{width:100%;margin:15px auto;border-collapse:collapse;font-size:12px}
+.results-table th,.results-table td{padding:8px;border:1px solid #2a2a2a;text-align:center}
+.results-table th{background:#111}
+.xp-bar{width:100%;height:8px;background:#111;border-radius:4px;margin-top:4px;overflow:hidden}
+.xp-fill{height:100%;background:linear-gradient(90deg,#444,#ffaa33);transition:width .5s}
+
+/* Random Event Flash */
+.event-flash{position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:12;display:none}
+.event-flash.active{display:block;animation:eventFlash .5s forwards}
+@keyframes eventFlash{0%{background:rgba(255,255,255,0)}50%{background:rgba(255,0,0,0.1)}100%{background:rgba(255,255,255,0)}}
+
+/* Controls hint */
+.controls-hint{position:absolute;bottom:3px;right:5px;font-size:9px;color:#333;text-align:left;z-index:10}
+
+/* Mobile Controls */
+.mobile-controls{display:none;position:absolute;bottom:80px;left:15px;z-index:20}
+.mobile-btn{width:50px;height:50px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:50%;position:absolute}
+.mobile-btn:active{background:rgba(255,255,255,0.2)}
+.mobile-up{top:0;left:50px}.mobile-down{top:100px;left:50px}.mobile-left{top:50px;left:0}.mobile-right{top:50px;left:100px}
+.mobile-action{position:absolute;bottom:80px;right:15px;z-index:20;display:none}
+.mobile-shoot{width:70px;height:70px;background:rgba(255,50,50,0.2);border:2px solid rgba(255,50,50,0.4);border-radius:50%}
+.mobile-shoot:active{background:rgba(255,50,50,0.4)}
+
+@media(max-width:768px){
+    .mobile-controls,.mobile-action{display:block}
+    .controls-hint{display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- MAIN MENU -->
+<div id="mainMenu" class="screen active">
+    <h1 class="title">همسات الخيانة</h1>
+    <p class="subtitle">WHISPERS OF BETRAYAL — Horror Survival LAN</p>
+    <div id="nativeHostInfo" style="display:none;margin-bottom:10px;padding:8px;border:1px solid #2a2a2a;border-radius:6px;color:#aaa;font-size:11px"></div><div class="menu-box">
+        <div class="input-group">
+            <label>عنوان سيرفر الـLAN / LAN Server</label>
+            <input type="text" id="serverUrl" placeholder="ws://192.168.1.10:3000" value="">
+            <div style="font-size:9px;color:#555;margin-top:4px">في هاتف الـHost اتركه فارغاً. في هواتف الأصدقاء اكتب ws://IP:3000</div>
+        </div>
+        <div class="input-group">
+            <label>اسم اللاعب / Player Name</label>
+            <input type="text" id="playerName" placeholder="أدخل اسمك" value="Survivor" maxlength="15">
+        </div>
+        <button class="btn primary" onclick="createRoom()">🎮 إنشاء غرفة (Create Room)</button>
+        <div class="divider">— أو —</div>
+        <div class="input-group">
+            <label>رمز الغرفة / Room Code</label>
+            <input type="text" id="roomCode" placeholder="أدخل رمز الغرفة">
+        </div>
+        <button class="btn" onclick="joinRoom()">🔗 الانضمام (Join Room)</button>
+        <div class="divider" style="margin-top:15px"></div>
+        <div style="font-size:10px;color:#444;text-align:center;line-height:1.6">
+            للعب عبر LAN: شغّل الخادم على جهاز واحد ثم انضم الآخرون باستخدام IP الجهاز<br>
+            To play via LAN: Run server on one device, others join using the device's IP
+        </div>
+    </div>
+</div>
+
+<!-- LOBBY -->
+<div id="lobbyScreen" class="screen">
+    <div class="lobby-container">
+        <div class="lobby-header">
+            <h2 style="font-size:18px;margin-bottom:5px">🎭 اللوبي / Lobby</h2>
+            <div class="room-code" id="displayRoomCode">----</div>
+            <p style="font-size:11px;color:#555">شارك هذا الرمز مع أصدقائك / Share this code with friends</p>
+        </div>
+
+        <div style="margin:15px 0">
+            <label style="font-size:11px;color:#666;display:block;margin-bottom:6px">اختر الخريطة / Select Map:</label>
+            <div class="map-grid" id="mapGrid">
+                <div class="map-card selected" data-map="hospital" onclick="selectMap('hospital')">
+                    <div class="map-name">🏥 مستشفى</div>
+                    <div class="map-desc">Hospital</div>
+                </div>
+                <div class="map-card" data-map="school" onclick="selectMap('school')">
+                    <div class="map-name">🏫 مدرسة</div>
+                    <div class="map-desc">School</div>
+                </div>
+                <div class="map-card" data-map="forest" onclick="selectMap('forest')">
+                    <div class="map-name">🌲 غابة</div>
+                    <div class="map-desc">Forest</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="player-list" id="playerList"></div>
+        <button class="btn" id="readyBtn" onclick="toggleReady()">✅ جاهز (Ready)</button>
+        <button class="btn primary" id="startBtn" onclick="startGame()" style="display:none">🚀 بدء اللعبة (Start)</button>
+        <button class="btn" onclick="leaveRoom()" style="margin-top:6px;background:#2a0a0a;border-color:#3a1a1a">🚪 خروج (Leave)</button>
+    </div>
+</div>
+
+<!-- GAME -->
+<div id="gameScreen" class="screen">
+    <canvas id="gameCanvas"></canvas>
+
+    <div class="hud hud-top">
+        <div class="timer" id="gameTimer">15:00</div>
+        <div class="objective" id="objectiveText">🔑 ابحث عن المفاتيح الثلاثة</div>
+    </div>
+
+    <div class="hud hud-bottom-left">
+        <div class="bar-label">❤️ الصحة</div>
+        <div class="bar-container"><div class="bar-fill health-bar" id="healthBar" style="width:100%"></div></div>
+        <div class="bar-label">⚡ الطاقة</div>
+        <div class="bar-container"><div class="bar-fill stamina-bar" id="staminaBar" style="width:100%"></div></div>
+    </div>
+
+    <div class="hud hud-bottom-right">
+        <div class="weapon-info">
+            <div>🔫 <span id="weaponName">Pistol</span></div>
+            <div class="ammo"><span id="ammoCount">12</span> / <span id="maxAmmo">12</span></div>
+            <div class="keys">
+                <div class="key-icon red" id="keyRed"></div>
+                <div class="key-icon blue" id="keyBlue"></div>
+                <div class="key-icon green" id="keyGreen"></div>
+            </div>
+            <div style="margin-top:4px;font-size:10px;color:#666" id="inventoryList">Flashlight, Medkit</div>
+        </div>
+    </div>
+
+    <canvas class="minimap" id="minimap"></canvas>
+    <div class="damage-overlay" id="damageOverlay"></div>
+    <div class="event-flash" id="eventFlash"></div>
+
+    <div class="hiding-overlay" id="hidingOverlay">
+        <div class="hiding-text">👁️ أنت مختبئ...</div>
+        <p style="color:#555;margin-top:8px;font-size:14px">اضغط C للخروج / Press C to exit</p>
+    </div>
+
+    <div class="jumpscare" id="jumpscare">
+        <img id="jumpscareImg" src="" alt="">
+        <div class="jumpscare-text" id="jumpscareText"></div>
+    </div>
+
+    <div class="chat-box" id="chatBox">
+        <div class="chat-messages" id="chatMessages"></div>
+        <input type="text" class="chat-input" id="chatInput" placeholder="اكتب رسالة... (Enter)" onkeydown="handleChat(event)">
+    </div>
+
+    <!-- Mobile Controls -->
+    <div class="mobile-controls" id="mobileControls">
+        <div class="mobile-btn mobile-up" ontouchstart="setMobileInput('up',true)" ontouchend="setMobileInput('up',false)"></div>
+        <div class="mobile-btn mobile-down" ontouchstart="setMobileInput('down',true)" ontouchend="setMobileInput('down',false)"></div>
+        <div class="mobile-btn mobile-left" ontouchstart="setMobileInput('left',true)" ontouchend="setMobileInput('left',false)"></div>
+        <div class="mobile-btn mobile-right" ontouchstart="setMobileInput('right',true)" ontouchend="setMobileInput('right',false)"></div>
+    </div>
+    <div class="mobile-action" id="mobileAction">
+        <div class="mobile-shoot" ontouchstart="mobileShoot()"></div>
+    </div>
+
+    <div class="controls-hint">WASD:حركة | Mouse:تصويب | Click:إطلاق | Shift:ركض | C:اختباء | R:تعبئة | 1-3:أدوات | M:خريطة | Enter:دردشة</div>
+</div>
+
+<!-- GAME OVER -->
+<div id="gameOverScreen" class="screen">
+    <div class="game-over-box">
+        <h1 class="game-over-title" id="gameOverTitle">انتهت اللعبة</h1>
+        <p id="gameOverMessage" style="color:#888;margin-bottom:15px"></p>
+        <table class="results-table">
+            <thead><tr><th>اللاعب</th><th>الحالة</th><th>💀 قتلى</th><th>😈 ملعون</th><th>⭐ XP</th></tr></thead>
+            <tbody id="resultsBody"></tbody>
+        </table>
+        <button class="btn primary" onclick="returnToMenu()" style="width:200px;margin-top:20px">🏠 القائمة الرئيسية</button>
+    </div>
+</div>
+
+<div id="notifications"></div>
+
+<script src="host-engine.js"></script>
+<script>
+const TILE_SIZE=32,MAP_WIDTH=40,MAP_HEIGHT=30;
+const MONSTER_FACES={hunter:'/assets/The_Hunter.png',stalker:'/assets/The_Stalker.png',mimic:'/assets/The_Mimic.png',brute:'/assets/The_Brute.png'};
+let ws=null,myId=null,roomId=null,isHost=false,gameState=null,mapData=null,mapName='';
+let camera={x:0,y:0},inputs={up:false,down:false,left:false,right:false,run:false};
+let isHiding=false,showMinimap=true,chatActive=false,lastShootTime=0,particles=[];
+let audioCtx=null,heartbeatInterval=null,lastJumpscare=0;
+
+if(window.AndroidHost){const info=document.getElementById('nativeHostInfo');if(info){info.style.display='block';info.innerHTML='📡 هذا الهاتف يمكنه استضافة اللعبة عبر LAN<br><b>'+AndroidHost.getLanUrl()+'</b><br><span style="color:#666">على هواتف الأصدقاء استعملوا نفس العنوان.</span>';}}
+
+const canvas=document.getElementById('gameCanvas');
+const ctx=canvas.getContext('2d');
+const minimapCanvas=document.getElementById('minimap');
+const minimapCtx=minimapCanvas.getContext('2d');
+
+function resizeCanvas(){canvas.width=window.innerWidth;canvas.height=window.innerHeight;minimapCanvas.width=120;minimapCanvas.height=120}
+window.addEventListener('resize',resizeCanvas);resizeCanvas();
+
+function initAudio(){if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)()}
+
+function playSound(type){
+    if(!audioCtx)return;
+    const osc=audioCtx.createOscillator(),gain=audioCtx.createGain();
+    osc.connect(gain);gain.connect(audioCtx.destination);
+    const now=audioCtx.currentTime;
+    switch(type){
+        case'shoot':osc.type='square';osc.frequency.setValueAtTime(800,now);osc.frequency.exponentialRampToValueAtTime(100,now+0.1);gain.gain.setValueAtTime(0.25,now);gain.gain.exponentialRampToValueAtTime(0.01,now+0.1);osc.start();osc.stop(now+0.1);break;
+        case'hit':osc.type='sawtooth';osc.frequency.setValueAtTime(150,now);gain.gain.setValueAtTime(0.3,now);gain.gain.exponentialRampToValueAtTime(0.01,now+0.3);osc.start();osc.stop(now+0.3);break;
+        case'monster':osc.type='sine';osc.frequency.setValueAtTime(60,now);osc.frequency.linearRampToValueAtTime(30,now+0.6);gain.gain.setValueAtTime(0.2,now);gain.gain.exponentialRampToValueAtTime(0.01,now+0.6);osc.start();osc.stop(now+0.6);break;
+        case'collect':osc.type='sine';osc.frequency.setValueAtTime(500,now);osc.frequency.exponentialRampToValueAtTime(1000,now+0.1);gain.gain.setValueAtTime(0.2,now);gain.gain.exponentialRampToValueAtTime(0.01,now+0.2);osc.start();osc.stop(now+0.2);break;
+        case'heartbeat':osc.type='sine';osc.frequency.setValueAtTime(25,now);gain.gain.setValueAtTime(0.15,now);gain.gain.exponentialRampToValueAtTime(0.01,now+0.25);osc.start();osc.stop(now+0.25);break;
+        case'jumpscare':osc.type='sawtooth';osc.frequency.setValueAtTime(50,now);osc.frequency.exponentialRampToValueAtTime(300,now+0.3);gain.gain.setValueAtTime(0.4,now);gain.gain.exponentialRampToValueAtTime(0.01,now+0.5);osc.start();osc.stop(now+0.5);break;
+        case'event':osc.type='triangle';osc.frequency.setValueAtTime(200,now);osc.frequency.linearRampToValueAtTime(800,now+0.2);osc.frequency.linearRampToValueAtTime(100,now+0.5);gain.gain.setValueAtTime(0.15,now);gain.gain.exponentialRampToValueAtTime(0.01,now+0.5);osc.start();osc.stop(now+0.5);break;
+    }
+}
+
+function connect(){
+    const configured=(document.getElementById('serverUrl')?.value||'').trim();
+    let endpoint=configured;
+    if(!endpoint){ endpoint=window.AndroidHost ? 'ws://127.0.0.1:3000' : `${window.location.protocol==='https:'?'wss:':'ws:'}//${window.location.host}`; }
+    ws=new WebSocket(endpoint);
+    ws.onopen=()=>console.log('Connected');
+    ws.onmessage=(e)=>handleServerMessage(JSON.parse(e.data));
+    ws.onclose=()=>{showNotification('❌ انقطع الاتصال / Disconnected');setTimeout(()=>location.reload(),3000)};
+}
+
+function handleServerMessage(data){
+    switch(data.type){
+        case'roomCreated':myId=data.playerId;roomId=data.roomId;isHost=true;showScreen('lobbyScreen');document.getElementById('displayRoomCode').textContent=roomId;break;
+        case'joinedRoom':myId=data.playerId;roomId=data.roomId;showScreen('lobbyScreen');document.getElementById('displayRoomCode').textContent=roomId;break;
+        case'lobbyState':updateLobby(data);break;
+        case'gameStart':mapData=data.map;mapName=data.mapName;showScreen('gameScreen');initAudio();startGameLoop();if(data.monsters)showNotification(`⚠️ ${data.monsters.length} وحش في ${data.mapName}`);break;
+        case'gameState':gameState=data;updateHUD();checkJumpscare();break;
+        case'itemCollected':playSound('collect');showNotification('✨ تم جمع عنصر!');break;
+        case'monsterHit':playSound('hit');addParticle(data.x,data.y,'hit');break;
+        case'monsterKilled':showNotification(`☠️ تم قتل ${data.monsterType}!`);break;
+        case'shoot':if(data.playerId!==myId)playSound('shoot');addParticle(data.x,data.y,'muzzle');break;
+        case'stunUsed':addParticle(data.x,data.y,'stun');showNotification('⚡ الوحش مصعوق!');break;
+        case'noiseUsed':showNotification('🔊 صوت مرتفع!');break;
+        case'playerEscaped':showNotification(`🏃 ${data.name} هرب!`);break;
+        case'generatorActivated':showNotification('🔌 المولد يعمل! اهرب الآن!');break;
+        case'exitOpened':showNotification('🚪 الباب مفتوح! 60 ثانية!');break;
+        case'randomEvent':handleRandomEvent(data.event);break;
+        case'gameEnd':showGameOver(data);break;
+        case'chat':addChatMessage(data.name,data.message);break;
+        case'error':showNotification('⚠️ '+data.message);break;
+    }
+}
+
+function handleRandomEvent(event){
+    playSound('event');
+    const flash=document.getElementById('eventFlash');
+    flash.classList.add('active');
+    setTimeout(()=>flash.classList.remove('active'),500);
+    const msgs={lights_flicker:'💡 الأنوار تومض...',distant_scream:'😱 صراخ بعيد...',footsteps:'👣 خطوات تقترب...',door_slam:'🚪 باب يُغلق بقوة!',whisper:'🌬️ همسات في الظلام...'};
+    showNotification(msgs[event]||'👁️ شيء ما يحدث...');
+}
+
+function checkJumpscare(){
+    if(!gameState||!gameState.monsters)return;
+    const me=gameState.players.find(p=>p.id===myId);
+    if(!me||me.isDead)return;
+    const now=Date.now();
+    if(now-lastJumpscare<5000)return;
+    gameState.monsters.forEach(m=>{
+        const dist=Math.sqrt((me.x-m.x)**2+(me.y-m.y)**2);
+        if(dist<80&&m.state==='CHASE'){
+            lastJumpscare=now;
+            showJumpscare(m.type);
+        }
+    });
+}
+
+function showJumpscare(monsterType){
+    const js=document.getElementById('jumpscare');
+    const img=document.getElementById('jumpscareImg');
+    const txt=document.getElementById('jumpscareText');
+    const faceUrl=MONSTER_FACES[monsterType]||MONSTER_FACES.hunter;
+    img.src=faceUrl;
+    const names={hunter:'THE HUNTER يطاردك!',stalker:'THE STALKER يراقبك!',mimic:'THE MIMIC يقلدك!',brute:'THE BRUTE يحطم كل شيء!'};
+    txt.textContent=names[monsterType]||'الوحش يقترب!';
+    js.classList.add('active');
+    playSound('jumpscare');
+    setTimeout(()=>js.classList.remove('active'),800);
+}
+
+function send(data){if(ws&&ws.readyState===WebSocket.OPEN)ws.send(JSON.stringify(data))}
+function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active')}
+function createRoom(){const name=document.getElementById('playerName').value.trim()||'Survivor';const selectedMap=document.querySelector('.map-card.selected')?.dataset.map||'hospital';connect();setTimeout(()=>send({type:'createRoom',name,map:selectedMap}),500)}
+function joinRoom(){const name=document.getElementById('playerName').value.trim()||'Survivor';const code=document.getElementById('roomCode').value.trim();if(!code){showNotification('⚠️ أدخل رمز الغرفة');return}connect();setTimeout(()=>send({type:'joinRoom',roomId:code,name}),500)}
+function selectMap(mapName){if(!isHost)return;document.querySelectorAll('.map-card').forEach(c=>c.classList.remove('selected'));document.querySelector(`[data-map="${mapName}"]`).classList.add('selected');send({type:'selectMap',map:mapName})}
+function toggleReady(){send({type:'ready'})}
+function startGame(){send({type:'startGame'})}
+function leaveRoom(){if(ws)ws.close();location.reload()}
+function returnToMenu(){location.reload()}
+
+function updateLobby(data){
+    const list=document.getElementById('playerList');list.innerHTML='';
+    data.players.forEach(p=>{
+        const div=document.createElement('div');div.className='player-item'+(p.ready?' ready':'');
+        div.innerHTML=`<span class="name">${p.name} ${p.isHost?'👑':''}</span><span class="status">${p.ready?'✅ جاهز':'⏳ غير جاهز'}</span>`;
+        list.appendChild(div);
+    });
+    document.getElementById('startBtn').style.display=isHost&&data.players.length>=1?'block':'none';
+    if(data.selectedMap){document.querySelectorAll('.map-card').forEach(c=>c.classList.toggle('selected',c.dataset.map===data.selectedMap))}
+}
+
+function showNotification(text){
+    const n=document.createElement('div');n.className='notification';n.textContent=text;
+    document.getElementById('notifications').appendChild(n);setTimeout(()=>n.remove(),3000);
+}
+function addChatMessage(name,msg){const c=document.getElementById('chatMessages');const d=document.createElement('div');d.innerHTML=`<strong style="color:#ff3333">${name}:</strong> <span style="color:#ccc">${msg}</span>`;c.appendChild(d);c.scrollTop=c.scrollHeight}
+function handleChat(e){if(e.key==='Enter'){const i=document.getElementById('chatInput');if(i.value.trim()){send({type:'chat',message:i.value.trim()})}i.value='';chatActive=false;i.blur();document.getElementById('chatBox').classList.remove('active')}}
+
+function updateHUD(){
+    if(!gameState)return;const me=gameState.players.find(p=>p.id===myId);if(!me)return;
+    const mins=Math.floor(gameState.time/60),secs=gameState.time%60;
+    document.getElementById('gameTimer').textContent=`${mins}:${secs.toString().padStart(2,'0')}`;
+    document.getElementById('healthBar').style.width=me.health+'%';
+    document.getElementById('staminaBar').style.width=me.stamina+'%';
+    document.getElementById('ammoCount').textContent=me.ammo;
+    document.getElementById('keyRed').classList.toggle('active',me.hasKeyRed);
+    document.getElementById('keyBlue').classList.toggle('active',me.hasKeyBlue);
+    document.getElementById('keyGreen').classList.toggle('active',me.hasKeyGreen);
+    document.getElementById('inventoryList').textContent=me.inventory.join(', ')||'فارغ';
+    let objText='🔑 ابحث عن المفاتيح الثلاثة';
+    if(me.hasKeyRed&&me.hasKeyBlue&&me.hasKeyGreen)objText='⚡ شغّل المولد في القبو';
+    if(gameState.objectives.generatorOn)objText='🚨 اهرب! الباب مفتوح!';
+    if(me.isCursed)objText='😈 أنت ملعون... اذهب للبوابة المظلمة';
+    document.getElementById('objectiveText').textContent=objText;
+    if(me.isHit){document.getElementById('damageOverlay').classList.add('active');playSound('hit');setTimeout(()=>document.getElementById('damageOverlay').classList.remove('active'),200)}
+    isHiding=me.isHiding;document.getElementById('hidingOverlay').classList.toggle('active',me.isHiding);
+    if(gameState.monsters){
+        let nearest=9999;
+        gameState.monsters.forEach(m=>{const d=Math.sqrt((me.x-m.x)**2+(me.y-m.y)**2);if(d<nearest)nearest=d});
+        if(nearest<120&&Math.random()<0.03)playSound('heartbeat');
+        if(nearest<80&&Math.random()<0.02)playSound('monster');
+    }
+}
+
+function addParticle(x,y,type){for(let i=0;i<8;i++)particles.push({x,y,vx:(Math.random()-0.5)*5,vy:(Math.random()-0.5)*5,life:1,type})}
+
+function render(){
+    if(!gameState||!mapData)return;const me=gameState.players.find(p=>p.id===myId);if(!me)return;
+    camera.x=me.x-canvas.width/2;camera.y=me.y-canvas.height/2;
+    ctx.fillStyle='#020202';ctx.fillRect(0,0,canvas.width,canvas.height);
+
+    const sx=Math.floor(camera.x/TILE_SIZE),sy=Math.floor(camera.y/TILE_SIZE);
+    const ex=sx+Math.ceil(canvas.width/TILE_SIZE)+1,ey=sy+Math.ceil(canvas.height/TILE_SIZE)+1;
+
+    for(let y=Math.max(0,sy);y<Math.min(MAP_HEIGHT,ey);y++){
+        for(let x=Math.max(0,sx);x<Math.min(MAP_WIDTH,ex);x++){
+            const tile=mapData[y][x],px=x*TILE_SIZE-camera.x,py=y*TILE_SIZE-camera.y;
+            if(tile===1){ctx.fillStyle=mapName==='Dark Forest'?'#0a1a0a':'#1a1a1a';ctx.fillRect(px,py,TILE_SIZE,TILE_SIZE);ctx.strokeStyle=mapName==='Dark Forest'?'#0f2a0f':'#222';ctx.strokeRect(px,py,TILE_SIZE,TILE_SIZE)}
+            else if(tile===2){ctx.fillStyle='#2a1a0a';ctx.fillRect(px,py,TILE_SIZE,TILE_SIZE);ctx.fillStyle='#4a3a2a';ctx.fillRect(px+4,py+2,TILE_SIZE-8,TILE_SIZE-4)}
+            else if(tile===3){ctx.fillStyle='#1a1a2a';ctx.fillRect(px,py,TILE_SIZE,TILE_SIZE);ctx.fillStyle='#2a2a3a';ctx.fillRect(px+2,py+14,TILE_SIZE-4,TILE_SIZE-16)}
+            else if(tile===5){ctx.fillStyle='#0a0a0a';ctx.fillRect(px,py,TILE_SIZE,TILE_SIZE);ctx.fillStyle='#ff8800';ctx.beginPath();ctx.arc(px+TILE_SIZE/2,py+TILE_SIZE/2,7,0,Math.PI*2);ctx.fill();ctx.shadowColor='#ff8800';ctx.shadowBlur=15;ctx.fill();ctx.shadowBlur=0}
+            else if(tile===6){ctx.fillStyle='#0a1a0a';ctx.fillRect(px,py,TILE_SIZE,TILE_SIZE);ctx.fillStyle=gameState.objectives.exitOpen?'#00ff00':'#ff0000';ctx.fillRect(px+4,py+2,TILE_SIZE-8,TILE_SIZE-4);if(gameState.objectives.exitOpen){ctx.shadowColor='#00ff00';ctx.shadowBlur=10;ctx.fillRect(px+4,py+2,TILE_SIZE-8,TILE_SIZE-4);ctx.shadowBlur=0}}
+            else if(tile===10){ctx.fillStyle='#0a150a';ctx.fillRect(px,py,TILE_SIZE,TILE_SIZE);ctx.fillStyle='#1a2a1a';ctx.fillRect(px+2,py+2,TILE_SIZE-4,TILE_SIZE-4)}
+            else{ctx.fillStyle='#080808';ctx.fillRect(px,py,TILE_SIZE,TILE_SIZE)}
+        }
+    }
+
+    gameState.items.forEach(item=>{
+        const ix=item.x-camera.x,iy=item.y-camera.y;
+        if(item.type==='key'){ctx.fillStyle=item.keyType==='red'?'#ff2222':item.keyType==='blue'?'#2222ff':'#22ff22';ctx.beginPath();ctx.arc(ix,iy,6,0,Math.PI*2);ctx.shadowColor=ctx.fillStyle;ctx.shadowBlur=12;ctx.fill();ctx.shadowBlur=0}
+        else{ctx.fillStyle=item.itemType==='ammo'?'#ffaa33':item.itemType==='medkit'?'#ff2222':item.itemType==='noise'?'#aaaaff':'#ffff33';ctx.fillRect(ix-4,iy-4,8,8)}
+    });
+
+    gameState.players.forEach(p=>{
+        if(p.id===myId&&p.isHiding)return;if(p.isDead)return;
+        const px=p.x-camera.x,py=p.y-camera.y;
+        ctx.fillStyle=p.id===myId?'#4488ff':p.isCursed?'#ff2222':'#44ff44';
+        ctx.beginPath();ctx.arc(px,py,9,0,Math.PI*2);ctx.fill();
+        ctx.strokeStyle=ctx.fillStyle;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(px+Math.cos(p.angle)*14,py+Math.sin(p.angle)*14);ctx.stroke();
+        ctx.fillStyle='#ddd';ctx.font='9px Arial';ctx.textAlign='center';ctx.fillText(p.name,px,py-14);
+        if(!p.isHiding){ctx.fillStyle='rgba(255,255,200,0.08)';ctx.beginPath();ctx.moveTo(px,py);ctx.arc(px,py,70,p.angle-0.35,p.angle+0.35);ctx.fill()}
+    });
+
+    if(gameState.monsters){
+        gameState.monsters.forEach(m=>{
+            const mx=m.x-camera.x,my=m.y-camera.y;
+            const g=ctx.createRadialGradient(mx,my,4,mx,my,28);g.addColorStop(0,'rgba(255,0,0,0.9)');g.addColorStop(1,'rgba(255,0,0,0)');
+            ctx.fillStyle=g;ctx.beginPath();ctx.arc(mx,my,28,0,Math.PI*2);ctx.fill();
+            const colors={hunter:'#ff0000',stalker:'#8800ff',mimic:'#ff8800',brute:'#aa0000'};
+            ctx.fillStyle=colors[m.type]||'#ff0000';ctx.beginPath();ctx.arc(mx,my,11,0,Math.PI*2);ctx.fill();
+            ctx.fillStyle='#ffff00';ctx.beginPath();ctx.arc(mx-3,my-3,2.5,0,Math.PI*2);ctx.arc(mx+3,my-3,2.5,0,Math.PI*2);ctx.fill();
+            if(m.stunTimer>0){ctx.strokeStyle='#ffff00';ctx.lineWidth=2;ctx.beginPath();ctx.arc(mx,my,16,0,Math.PI*2);ctx.stroke()}
+        });
+    }
+
+    ctx.fillStyle='#ffaa33';gameState.bullets.forEach(b=>{ctx.beginPath();ctx.arc(b.x-camera.x,b.y-camera.y,2.5,0,Math.PI*2);ctx.fill()});
+
+    particles=particles.filter(p=>p.life>0);particles.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.life-=0.04;ctx.fillStyle=p.type==='hit'?`rgba(255,80,0,${p.life})`:p.type==='stun'?`rgba(255,255,0,${p.life})`:`rgba(255,180,80,${p.life})`;ctx.fillRect(p.x-camera.x-2,p.y-camera.y-2,4,4)});
+
+    if(!me.isDead){
+        const d=document.createElement('canvas');d.width=canvas.width;d.height=canvas.height;const dc=d.getContext('2d');
+        dc.fillStyle='rgba(0,0,0,0.94)';dc.fillRect(0,0,canvas.width,canvas.height);
+        dc.globalCompositeOperation='destination-out';
+        const px=canvas.width/2,py=canvas.height/2;
+        const grad=dc.createRadialGradient(px,py,18,px,py,140);grad.addColorStop(0,'rgba(0,0,0,1)');grad.addColorStop(0.5,'rgba(0,0,0,0.7)');grad.addColorStop(1,'rgba(0,0,0,0)');
+        dc.fillStyle=grad;dc.beginPath();dc.moveTo(px,py);dc.arc(px,py,140,me.angle-0.45,me.angle+0.45);dc.fill();
+        const amb=dc.createRadialGradient(px,py,8,px,py,55);amb.addColorStop(0,'rgba(0,0,0,1)');amb.addColorStop(1,'rgba(0,0,0,0)');
+        dc.fillStyle=amb;dc.beginPath();dc.arc(px,py,55,0,Math.PI*2);dc.fill();
+        dc.globalCompositeOperation='source-over';ctx.drawImage(d,0,0);
+    }
+
+    if(showMinimap){
+        minimapCtx.fillStyle='#000';minimapCtx.fillRect(0,0,120,120);
+        const sc=120/(MAP_WIDTH*TILE_SIZE);
+        minimapCtx.fillStyle='#1a1a1a';for(let y=0;y<MAP_HEIGHT;y++)for(let x=0;x<MAP_WIDTH;x++)if(mapData[y][x]===1)minimapCtx.fillRect(x*TILE_SIZE*sc,y*TILE_SIZE*sc,TILE_SIZE*sc+1,TILE_SIZE*sc+1);
+        gameState.players.forEach(p=>{if(p.isDead)return;minimapCtx.fillStyle=p.id===myId?'#4488ff':'#44ff44';minimapCtx.fillRect(p.x*sc-2,p.y*sc-2,4,4)});
+        if(gameState.monsters){gameState.monsters.forEach(m=>{minimapCtx.fillStyle='#ff0000';minimapCtx.fillRect(m.x*sc-2.5,m.y*sc-2.5,5,5)})}
+        const ex=20*TILE_SIZE*sc,ey=3*TILE_SIZE*sc;minimapCtx.fillStyle=gameState.objectives.exitOpen?'#0f0':'#f00';minimapCtx.fillRect(ex-3,ey-3,6,6);
+    }
+}
+
+function startGameLoop(){function loop(){if(document.getElementById('gameScreen').classList.contains('active')){render();requestAnimationFrame(loop)}}loop()}
+
+// Input
+document.addEventListener('keydown',e=>{
+    if(chatActive)return;
+    switch(e.key.toLowerCase()){
+        case'w':case'arrowup':inputs.up=true;break;case's':case'arrowdown':inputs.down=true;break;case'a':case'arrowleft':inputs.left=true;break;case'd':case'arrowright':inputs.right=true;break;case'shift':inputs.run=true;break;case'c':send({type:'input',type:'hide'});break;case'r':send({type:'input',type:'reload'});break;case'1':send({type:'input',type:'useItem',item:'medkit'});break;case'2':send({type:'input',type:'useItem',item:'stun'});break;case'3':send({type:'input',type:'useItem',item:'noise'});break;case'm':showMinimap=!showMinimap;break;case'enter':chatActive=true;document.getElementById('chatBox').classList.add('active');document.getElementById('chatInput').focus();break;
+    }
+    send({type:'input',type:'move',data:inputs});
+});
+document.addEventListener('keyup',e=>{switch(e.key.toLowerCase()){case'w':case'arrowup':inputs.up=false;break;case's':case'arrowdown':inputs.down=false;break;case'a':case'arrowleft':inputs.left=false;break;case'd':case'arrowright':inputs.right=false;break;case'shift':inputs.run=false;break}send({type:'input',type:'move',data:inputs})});
+document.addEventListener('mousemove',e=>{if(!gameState)return;const me=gameState.players.find(p=>p.id===myId);if(!me)return;const rect=canvas.getBoundingClientRect();send({type:'input',type:'aim',angle:Math.atan2(e.clientY-rect.top-canvas.height/2,e.clientX-rect.left-canvas.width/2)})});
+document.addEventListener('mousedown',e=>{if(e.button===0&&gameState){const now=Date.now();if(now-lastShootTime>200){send({type:'input',type:'shoot'});playSound('shoot');lastShootTime=now}}});
+
+// Mobile
+function setMobileInput(dir,state){inputs[dir]=state;send({type:'input',type:'move',data:inputs})}
+function mobileShoot(){const now=Date.now();if(now-lastShootTime>200){send({type:'input',type:'shoot'});playSound('shoot');lastShootTime=now}}
+
+function showGameOver(data){
+    showScreen('gameOverScreen');
+    const t=document.getElementById('gameOverTitle');t.textContent=data.message;t.className='game-over-title '+(data.reason==='escape'?'escape':'dead');
+    document.getElementById('gameOverMessage').textContent=data.winners.length>0?'الفائزون: '+data.winners.join(', '):'لا يوجد ناجين...';
+    const tb=document.getElementById('resultsBody');tb.innerHTML='';
+    data.players.forEach(p=>{const tr=document.createElement('tr');tr.innerHTML=`<td>${p.name}</td><td>${p.escaped?'🏃 هرب':p.isDead?'💀 مات':'😐 نجا'}</td><td>${p.kills}</td><td>${p.isCursed?'😈 نعم':'✅ لا'}</td><td>${p.xp} XP</td>`;tb.appendChild(tr)});
+}
+</script>
+</body>
+</html>
